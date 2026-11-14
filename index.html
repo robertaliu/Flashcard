@@ -1,1 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Flashcard">
+<title>Flashcard</title>
 
+<style>
+:root{
+--bg:#f7f7f8;
+--white:#fff;
+--text:#171717;
+--muted:#777781;
+--border:#e8e8ed;
+--green:#17834b;
+--greenbg:#e5f7eb;
+--red:#ce3445;
+--redbg:#fff0f1;
+}
+*{box-sizing:border-box}
+body{
+margin:0;background:var(--bg);color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+-webkit-font-smoothing:antialiased
+}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{max-width:540px;margin:auto;padding:24px 20px 90px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:35px}
+.logo{font-size:25px;font-weight:800;letter-spacing:-1px}
+.logo span{color:#999}
+.badge{font-size:12px;font-weight:700;background:#eaeaec;padding:9px 13px;border-radius:30px}
+h1{font-size:35px;letter-spacing:-1.5px;margin:0 0 10px}
+h2{font-size:22px;letter-spacing:-.5px;margin:30px 0 15px}
+p{color:var(--muted);line-height:1.5}
+.subtitle{margin:0 0 28px}
+.hidden{display:none!important}
+.panel,.deck,.statbox{
+background:white;border:1px solid var(--border);
+border-radius:21px;padding:21px;margin-bottom:13px
+}
+.btn{
+width:100%;border:0;border-radius:14px;
+padding:15px 18px;margin-top:10px;
+background:#171717;color:white;font-size:15px;font-weight:650
+}
+.btn.secondary{background:#eaeaec;color:#171717}
+.btn.danger{background:var(--redbg);color:var(--red)}
+.btn.small{width:auto;padding:10px 13px;margin:0;font-size:13px}
+.btn:disabled{opacity:.4}
+.back{
+border:0;background:transparent;color:#555;
+font-size:15px;font-weight:650;padding:8px 0;margin-bottom:22px
+}
+label{display:block;font-size:13px;font-weight:700;margin:14px 0 5px}
+input{
+width:100%;border:1px solid var(--border);border-radius:13px;
+background:#fafafa;padding:15px;font-size:16px;outline:none
+}
+input:focus{border-color:#777;background:white}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.muted{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{font-size:32px;font-weight:800}
+.deckname{font-size:19px;font-weight:750}
+.deckactions{display:flex;gap:8px;margin-top:16px}
+.deckactions button{
+flex:1;border:0;border-radius:11px;padding:12px 8px;
+background:#eeeef1;color:#171717;font-weight:650
+}
+.deckactions .dark{background:#171717;color:white}
+.item{padding:15px 0;border-bottom:1px solid var(--border)}
+.item:last-child{border-bottom:0}
+.item strong{display:block;overflow-wrap:anywhere}
+.item span{display:block;color:var(--muted);font-size:14px;margin:5px 0 10px}
+.itemactions{display:flex;gap:8px}
+.empty{text-align:center;color:var(--muted);padding:35px 12px}
+.progress{height:6px;background:#e7e7eb;border-radius:20px;overflow:hidden;margin:18px 0}
+.progressfill{height:100%;background:#171717;transition:width .3s}
+.flashcard{height:320px;perspective:1200px;margin:25px 0}
+.inner{
+width:100%;height:100%;position:relative;
+transform-style:preserve-3d;transition:transform .55s ease
+}
+.flashcard.flipped .inner{transform:rotateY(180deg)}
+.face{
+position:absolute;inset:0;background:white;
+border:1px solid var(--border);border-radius:25px;
+display:flex;flex-direction:column;align-items:center;
+justify-content:center;text-align:center;padding:24px;
+backface-visibility:hidden;-webkit-backface-visibility:hidden;
+overflow-wrap:anywhere
+}
+.face.backface{transform:rotateY(180deg)}
+.face.correct{background:var(--greenbg);border-color:#a9dfba}
+.face.incorrect{background:var(--redbg);border-color:#f0b4bd}
+.language{font-size:12px;letter-spacing:2px;font-weight:800;color:var(--muted);margin-bottom:20px}
+.word{font-size:clamp(28px,8vw,42px);font-weight:800;letter-spacing:-1px;line-height:1.2}
+.result{font-weight:750;margin-top:22px}
+.correct .result{color:var(--green)}
+.incorrect .result{color:var(--red)}
+.listen{
+border:0;border-radius:30px;background:#ffffffb8;
+padding:11px 16px;margin-top:17px;font-weight:650;color:#171717
+}
+.center{text-align:center}
+.footer{text-align:center;font-size:12px;color:#aaa;margin-top:35px}
+</style>
+</head>
+
+<body>
+<div class="app">
+<header>
+<div class="logo">Flash<span>card.</span></div>
+<div class="badge">EN → DE</div>
+</header>
+
+<section id="home">
+<h1>Learn German.</h1>
+<p class="subtitle">Your words. Your pace. Your progress.</p>
+
+<div class="stats">
+<div class="statbox">
+<div class="stat" id="totalCards">0</div>
+<div class="muted">Total flashcards</div>
+</div>
+<div class="statbox">
+<div class="stat" id="totalMistakes">0</div>
+<div class="muted">To review</div>
+</div>
+</div>
+
+<h2>My Decks</h2>
+<div id="deckList"></div>
+
+<button class="btn" onclick="show('newDeck')">+ Create New Deck</button>
+<button class="btn secondary" onclick="show('review')">Review Mistakes</button>
+<button class="btn secondary" onclick="show('backup')">Backup & Restore</button>
+</section>
+
+<section id="newDeck" class="hidden">
+<button class="back" onclick="show('home')">← Back</button>
+<h1>New Deck</h1>
+<p class="subtitle">Organize your vocabulary.</p>
+<div class="panel">
+<label>Deck name</label>
+<input id="deckName" placeholder="e.g. German A1">
+<button class="btn" onclick="createDeck()">Create Deck</button>
+</div>
+</section>
+
+<section id="deckPage" class="hidden">
+<button class="back" onclick="show('home')">← My Decks</button>
+<h1 id="deckTitle"></h1>
+<p class="subtitle" id="deckCount"></p>
+<button class="btn" onclick="startStudy()">Start Studying →</button>
+<button class="btn secondary" onclick="newCard()">+ Add Flashcard</button>
+<h2>Flashcards</h2>
+<div id="cardList"></div>
+<button class="btn danger" onclick="deleteDeck()">Delete Deck</button>
+</section>
+
+<section id="cardEditor" class="hidden">
+<button class="back" onclick="show('deckPage')">← Back</button>
+<h1 id="editorTitle">New Flashcard</h1>
+<p class="subtitle">English on the front. German on the back.</p>
+<div class="panel">
+<label>🇬🇧 Front — English</label>
+<input id="enInput" placeholder="e.g. Apple">
+<label>🇩🇪 Back — German</label>
+<input id="deInput" placeholder="e.g. Apfel">
+<button class="btn" onclick="saveCard(false)">Save Flashcard</button>
+<button class="btn secondary" id="saveAnother" onclick="saveCard(true)">Save & Add Another</button>
+</div>
+</section>
+
+<section id="study" class="hidden">
+<button class="back" onclick="exitStudy()">← Exit</button>
+<div class="row">
+<strong id="studyTitle">Study</strong>
+<span class="muted" id="counter"></span>
+</div>
+<div class="progress"><div class="progressfill" id="progressFill"></div></div>
+
+<div class="flashcard" id="flashcard">
+<div class="inner">
+<div class="face">
+<div class="language">ENGLISH</div>
+<div class="word" id="frontWord"></div>
+<p>Translate into German</p>
+</div>
+<div class="face backface" id="backFace">
+<div class="language">DEUTSCH</div>
+<div class="word" id="backWord"></div>
+<div class="result" id="resultText"></div>
+<p id="yourAnswer"></p>
+<button class="listen" onclick="speakGerman()">🔊 Listen</button>
+</div>
+</div>
+</div>
+
+<div id="answerArea">
+<label>Your answer in German</label>
+<input id="answerInput" lang="de" placeholder="Type or dictate your answer"
+autocomplete="off" autocapitalize="off" spellcheck="false">
+<p class="muted">🎤 To answer by voice, use the microphone on your iPhone keyboard with German dictation enabled.</p>
+<button class="btn" onclick="checkAnswer()">Check Answer →</button>
+</div>
+
+<div id="nextArea" class="hidden">
+<button class="btn" onclick="nextCard()">Next Card →</button>
+</div>
+</section>
+
+<section id="results" class="hidden">
+<button class="back" onclick="show('home')">← Home</button>
+<h1>Session Complete.</h1>
+<p class="subtitle">Great work. Keep going!</p>
+<div class="stats">
+<div class="statbox">
+<div class="stat" id="correctCount" style="color:var(--green)">0</div>
+<div class="muted">Correct</div>
+</div>
+<div class="statbox">
+<div class="stat" id="wrongCount" style="color:var(--red)">0</div>
+<div class="muted">Incorrect</div>
+</div>
+</div>
+<div class="panel center">
+<div class="stat" id="accuracy">0%</div>
+<p>Accuracy</p>
+</div>
+<button class="btn" onclick="show('home')">Back to Home</button>
+<button class="btn secondary" onclick="show('review')">Review Mistakes</button>
+</section>
+
+<section id="review" class="hidden">
+<button class="back" onclick="show('home')">← Home</button>
+<h1>Review Mistakes.</h1>
+<p class="subtitle">Practice the words you missed.</p>
+<div id="mistakeList"></div>
+<button class="btn" id="reviewButton" onclick="startReview()">Start Review →</button>
+</section>
+
+<section id="backup" class="hidden">
+<button class="back" onclick="show('home')">← Home</button>
+<h1>Your Data.</h1>
+<p class="subtitle">Keep your flashcards safe.</p>
+<div class="panel">
+<h2>Export Backup</h2>
+<p>Download a copy of your decks and flashcards.</p>
+<button class="btn" onclick="exportBackup()">Download Backup</button>
+</div>
+<div class="panel">
+<h2>Restore Backup</h2>
+<p>Import a backup. This will replace your current data.</p>
+<input type="file" id="importFile" accept=".json,application/json">
+<button class="btn secondary" onclick="importBackup()">Restore Backup</button>
+</div>
+</section>
+
+<div class="footer">Flashcard · Made for learning</div>
+</div>
+
+<script>
+const KEY="flashcard_app_v2";
+let data={decks:[]};
+let deckId=null;
+let editingId=null;
+let queue=[];
+let position=0;
+let correctCount=0;
+let wrongCount=0;
+let answered=false;
+
+const $=id=>document.getElementById(id);
+
+function uid(){
+return Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+}
+
+function load(){
+try{
+const saved=localStorage.getItem(KEY);
+if(saved){
+const parsed=JSON.parse(saved);
+if(parsed&&Array.isArray(parsed.decks))data=parsed;
+}
+}catch(e){alert("Unable to load saved data.");}
+}
+
+function save(){
+try{
+localStorage.setItem(KEY,JSON.stringify(data));
+return true;
+}catch(e){
+alert("Unable to save. Check your iPhone storage.");
+return false;
+}
+}
+
+function escapeHTML(s){
+return String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+function cards(){
+return data.decks.flatMap(d=>d.cards);
+}
+
+function deck(){
+return data.decks.find(d=>d.id===deckId);
+}
+
+function show(id){
+document.querySelectorAll(".app > section").forEach(s=>s.classList.add("hidden"));
+$(id).classList.remove("hidden");
+if(id==="home")renderHome();
+if(id==="deckPage")renderDeck();
+if(id==="review")renderReview();
+window.scrollTo(0,0);
+}
+
+function renderHome(){
+const all=cards();
+$("totalCards").textContent=all.length;
+$("totalMistakes").textContent=all.filter(c=>c.mistake).length;
+const list=$("deckList");
+list.innerHTML="";
+if(!data.decks.length){
+list.innerHTML='<div class="empty">No decks yet. Create your first deck!</div>';
+return;
+}
+data.decks.forEach(d=>{
+const box=document.createElement("div");
+box.className="deck";
+box.innerHTML=`<div class="deckname">${escapeHTML(d.name)}</div>
+<p class="muted">${d.cards.length} flashcards</p>
+<div class="deckactions"><button class="dark">Open Deck →</button></div>`;
+box.querySelector("button").onclick=()=>{
+deckId=d.id;
+show("deckPage");
+};
+list.appendChild(box);
+});
+}
+
+function createDeck(){
+const name=$("deckName").value.trim();
+if(!name)return alert("Enter a deck name.");
+const d={id:uid(),name,cards:[]};
+data.decks.push(d);
+if(!save()){data.decks.pop();return;}
+deckId=d.id;
+$("deckName").value="";
+show("deckPage");
+}
+
+function renderDeck(){
+const d=deck();
+if(!d){show("home");return;}
+$("deckTitle").textContent=d.name;
+$("deckCount").textContent=d.cards.length+" flashcards";
+const list=$("cardList");
+list.innerHTML="";
+if(!d.cards.length){
+list.innerHTML='<div class="empty">No flashcards yet.</div>';
+return;
+}
+d.cards.forEach(c=>{
+const div=document.createElement("div");
+div.className="item";
+div.innerHTML=`<strong>${escapeHTML(c.en)}</strong>
+<span>${escapeHTML(c.de)}</span>
+<div class="itemactions">
+<button class="btn secondary small edit">Edit</button>
+<button class="btn danger small delete">Delete</button>
+</div>`;
+div.querySelector(".edit").onclick=()=>editCard(c.id);
+div.querySelector(".delete").onclick=()=>{
+if(!confirm("Delete this flashcard?"))return;
+d.cards=d.cards.filter(x=>x.id!==c.id);
+save();
+renderDeck();
+};
+list.appendChild(div);
+});
+}
+
+function newCard(){
+editingId=null;
+$("editorTitle").textContent="New Flashcard";
+$("enInput").value="";
+$("deInput").value="";
+$("saveAnother").classList.remove("hidden");
+show("cardEditor");
+}
+
+function editCard(id){
+const c=deck().cards.find(x=>x.id===id);
+if(!c)return;
+editingId=id;
+$("editorTitle").textContent="Edit Flashcard";
+$("enInput").value=c.en;
+$("deInput").value=c.de;
+$("saveAnother").classList.add("hidden");
+show("cardEditor");
+}
+
+function saveCard(another){
+const en=$("enInput").value.trim();
+const de=$("deInput").value.trim();
+if(!en||!de)return alert("Enter both translations.");
+const d=deck();
+if(!d)return;
+if(editingId){
+const c=d.cards.find(x=>x.id===editingId);
+if(!c)return;
+const oldEn=c.en,oldDe=c.de;
+c.en=en;c.de=de;
+if(!save()){c.en=oldEn;c.de=oldDe;return;}
+}else{
+const c={id:uid(),en,de,mistake:false};
+d.cards.push(c);
+if(!save()){d.cards.pop();return;}
+}
+if(another&&!editingId){
+$("enInput").value="";
+$("deInput").value="";
+$("enInput").focus();
+}else{
+editingId=null;
+show("deckPage");
+}
+}
+
+function deleteDeck(){
+const d=deck();
+if(!d)return;
+if(!confirm("Delete this deck and all its cards?"))return;
+data.decks=data.decks.filter(x=>x.id!==d.id);
+save();
+deckId=null;
+show("home");
+}
+
+function shuffle(a){
+const b=[...a];
+for(let i=b.length-1;i>0;i--){
+const j=Math.floor(Math.random()*(i+1));
+[b[i],b[j]]=[b[j],b[i]];
+}
+return b;
+}
+
+function startStudy(){
+const d=deck();
+if(!d||!d.cards.length)return alert("Add flashcards first.");
+begin(d.cards,d.name);
+}
+
+function startReview(){
+const mistakes=cards().filter(c=>c.mistake);
+if(!mistakes.length)return alert("No mistakes to review!");
+begin(mistakes,"Review Mistakes");
+}
+
+function begin(list,title){
+queue=shuffle(list);
+position=0;
+correctCount=0;
+wrongCount=0;
+$("studyTitle").textContent=title;
+show("study");
+renderStudy();
+}
+
+function renderStudy(){
+if(position>=queue.length){finish();return;}
+answered=false;
+const c=queue[position];
+$("flashcard").classList.remove("flipped");
+$("backFace").classList.remove("correct","incorrect");
+$("frontWord").textContent=c.en;
+$("backWord").textContent=c.de;
+$("resultText").textContent="";
+$("yourAnswer").textContent="";
+$("answerInput").value="";
+$("answerArea").classList.remove("hidden");
+$("nextArea").classList.add("hidden");
+$("counter").textContent=(position+1)+" / "+queue.length;
+$("progressFill").style.width=(position/queue.length*100)+"%";
+}
+
+function normalize(s){
+return String(s).normalize("NFC").trim()
+.toLocaleLowerCase("de-DE")
+.replace(/[.!?]+$/g,"")
+.replace(/\s+/g," ");
+}
+
+function checkAnswer(){
+if(answered)return;
+const input=$("answerInput").value.trim();
+if(!input)return alert("Enter your answer first.");
+const c=queue[position];
+const correct=normalize(input)===normalize(c.de);
+answered=true;
+if(correct){
+correctCount++;
+c.mistake=false;
+$("backFace").classList.add("correct");
+$("resultText").textContent="✓ Correct!";
+}else{
+wrongCount++;
+c.mistake=true;
+$("backFace").classList.add("incorrect");
+$("resultText").textContent="✕ Incorrect";
+}
+$("yourAnswer").textContent="Your answer: "+input;
+save();
+$("answerInput").blur();
+$("answerArea").classList.add("hidden");
+$("nextArea").classList.remove("hidden");
+requestAnimationFrame(()=>$("flashcard").classList.add("flipped"));
+}
+
+function nextCard(){
+if(!answered)return;
+position++;
+renderStudy();
+}
+
+function finish(){
+const total=correctCount+wrongCount;
+$("correctCount").textContent=correctCount;
+$("wrongCount").textContent=wrongCount;
+$("accuracy").textContent=total?Math.round(correctCount/total*100)+"%":"0%";
+show("results");
+}
+
+function exitStudy(){
+if(confirm("Exit this session?"))show("home");
+}
+
+function renderReview(){
+const list=$("mistakeList");
+const mistakes=cards().filter(c=>c.mistake);
+list.innerHTML="";
+$("reviewButton").disabled=!mistakes.length;
+if(!mistakes.length){
+list.innerHTML='<div class="panel center">No mistakes to review. Great job! 🎉</div>';
+return;
+}
+mistakes.forEach(c=>{
+const div=document.createElement("div");
+div.className="item";
+div.innerHTML=`<strong>${escapeHTML(c.en)}</strong>
+<span>${escapeHTML(c.de)}</span>`;
+list.appendChild(div);
+});
+}
+
+function speakGerman(){
+if(!("speechSynthesis" in window)){
+alert("Speech playback is not supported on this browser.");
+return;
+}
+const c=queue[position];
+if(!c)return;
+speechSynthesis.cancel();
+const utterance=new SpeechSynthesisUtterance(c.de);
+utterance.lang="de-DE";
+utterance.rate=.82;
+speechSynthesis.speak(utterance);
+}
+
+function exportBackup(){
+const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");
+a.href=url;
+a.download="flashcard-backup.json";
+document.body.appendChild(a);
+a.click();
+a.remove();
+setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function importBackup(){
+const file=$("importFile").files[0];
+if(!file)return alert("Choose a backup file.");
+if(!confirm("Replace current data with this backup?"))return;
+const reader=new FileReader();
+reader.onload=()=>{
+try{
+const imported=JSON.parse(reader.result);
+if(!imported||!Array.isArray(imported.decks)||
+!imported.decks.every(d=>
+d&&typeof d.id==="string"&&typeof d.name==="string"&&
+Array.isArray(d.cards)&&d.cards.every(c=>
+c&&typeof c.id==="string"&&
+typeof c.en==="string"&&typeof c.de==="string"
+)))throw Error("Invalid");
+const old=data;
+data=imported;
+if(!save()){data=old;return;}
+alert("Backup restored!");
+show("home");
+}catch(e){alert("Invalid backup file.");}
+};
+reader.readAsText(file);
+}
+
+$("answerInput").addEventListener("keydown",e=>{
+if(e.key==="Enter"){e.preventDefault();checkAnswer();}
+});
+
+load();
+renderHome();
+</script>
+</body>
+</html>
